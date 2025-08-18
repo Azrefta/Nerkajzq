@@ -1,0 +1,24 @@
+{
+  "name": "simple-base",
+  "version": "1.0.0",
+  "description": "A simple base project by Azrefta",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node ./m.js"
+  },
+  "author": "Azrefta",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "npm:@shennmine/baileys",
+    "awesome-phonenumber": "^2.70.0",
+    "qrcode-terminal": "^0.12.0",
+    "pidusage": "^3.0.0",
+    "async-mutex": "^0.5.0",
+    "@hapi/boom": "^10.0.0",
+    "chalk": "^4.1.2",
+    "pino": "^8.1.0",
+    "jimp": "^0.16.1",
+    "node-cron": "^3.0.2"
+  }
+}
