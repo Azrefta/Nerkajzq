@@ -324,7 +324,7 @@ END:VCARD`
 
 const ids = [
   '120363271605687655@newsletter', // primary
-  '120363417721042596@newsletter'  // fallback
+//  '120363417721042596@newsletter'  // fallback
 ];
 
 let lastActivePeriod = null; // periode terakhir ids[0] aktif
