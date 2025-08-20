@@ -323,58 +323,80 @@ END:VCARD`
 };
 
 const ids = [
-  '120363271605687655@newsletter',
-  '120363417721042596@newsletter'
+  '120363271605687655@newsletter', // primary
+  '120363417721042596@newsletter'  // fallback
 ];
 
-  
-if (ids.includes(m.chat) || ids.includes(m.sender)) {
-    const text = m.body.toLowerCase();
+let lastActivePeriod = null; // periode terakhir ids[0] aktif
+let activeId = ids[0];       // default selalu primary
 
+// Fungsi untuk hitung periode (misal "2025-08-20 12:05")
+function getCurrentPeriod() {
+  const now = new Date();
+  const rounded = Math.floor(now.getMinutes() / 5) * 5;
+  return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${String(rounded).padStart(2,"0")}`;
+}
+
+  const text = m.body.toLowerCase();
+  const currentPeriod = getCurrentPeriod();
+
+  // Kalau pesan dari primary (ids[0])
+  if (m.chat === ids[0] || m.sender === ids[0]) {
+    lastActivePeriod = currentPeriod; // catat periode aktif
+    activeId = ids[0]; // tetap primary
+  }
+
+  // Kalau pesan dari fallback (ids[1]) & primary tidak aktif di periode ini
+  if ((m.chat === ids[1] || m.sender === ids[1]) && lastActivePeriod !== currentPeriod) {
+    activeId = ids[1]; // pindah ke fallback
+  }
+
+  // Hanya proses jika pesan dari activeId
+  if (m.chat === activeId || m.sender === activeId) {
     const stockKeywords = ["🥕","🫐","🍓","🍅","common egg","cosmetic","strawberry"];
 
     if (
-        text.includes("🥚") &&
-        text.includes("stock") &&
-        stockKeywords.some(keyword => text.includes(keyword.toLowerCase()))
+      text.includes("🥚") &&
+      text.includes("stock") &&
+      stockKeywords.some(keyword => text.includes(keyword.toLowerCase()))
     ) {
-        await client.sendMessage("120363422344034424@newsletter", { text: formatStock(m.body) });
+      await client.sendMessage("120363422344034424@newsletter", { text: formatStock(m.body) });
 
-    const matchedItems = targets.filter(item => new RegExp(item, "i").test(text));
+      const matchedItems = targets.filter(item => new RegExp(item, "i").test(text));
 
-    if (matchedItems.length > 0) {
+      if (matchedItems.length > 0) {
         const itemListText = matchedItems.join("\n- ");
         try {
-            m.meta = await client.groupMetadata("120363321707002812@g.us");
+          m.meta = await client.groupMetadata("120363321707002812@g.us");
         } catch (e) {
-            m.meta = {};
+          m.meta = {};
         }
 
         await client.sendMessage(
-    "120363321707002812@g.us",
-    {
-        text: `*Stock Notification!!* 📢\n\n🚀 Stock Available!!\n- ${itemListText}\n\n@120363321707002812@g.us`,
-        contextInfo: {
-            mentionedJid: m.meta.participants
+          "120363321707002812@g.us",
+          {
+            text: `*Stock Notification!!* 📢\n\n🚀 Stock Available!!\n- ${itemListText}\n\n@120363321707002812@g.us`,
+            contextInfo: {
+              mentionedJid: m.meta.participants
                 .filter(a => a.id.endsWith('@s.whatsapp.net'))
                 .map(a => a.id),
-            groupMentions: [
+              groupMentions: [
                 {
-                    groupJid: "120363321707002812@g.us",
-                    groupSubject: "everyone"
+                  groupJid: "120363321707002812@g.us",
+                  groupSubject: "everyone"
                 }
-            ]
-        }
-    },
-    { quoted: fkontak }
-);
-    }
+              ]
+            }
+          },
+          { quoted: fkontak }
+        );
+      }
     } else if (
-        text.includes("copyright © growagarden.info") &&
-        text.includes("mutation") &&
-        text.includes("weather")
+      text.includes("copyright © growagarden.info") &&
+      text.includes("mutation") &&
+      text.includes("weather")
     ) {
-        await client.sendMessage("120363422344034424@newsletter", { text: weatherInfo(m.body) });
+      await client.sendMessage("120363422344034424@newsletter", { text: weatherInfo(m.body) });
     }
 }
 const prefa = ["!", ".", "#"];
