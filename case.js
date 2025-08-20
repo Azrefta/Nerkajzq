@@ -323,82 +323,128 @@ END:VCARD`
 };
 
 const ids = [
-  '120363271605687655@newsletter', // primary
-//  '120363417721042596@newsletter'  // fallback
+  '120363417721042596@newsletter', // primary 
+  '120363271605687655@newsletter'  // fallback
 ];
 
 let lastActivePeriod = null; // periode terakhir ids[0] aktif
 let activeId = ids[0];       // default selalu primary
 
-// Fungsi untuk hitung periode (misal "2025-08-20 12:05")
+// Cache Egg
+let eggSentBlocks = {}; // key = "YYYY-MM-DD HH:MM", value = true
+
+// ==========================
+// Fungsi untuk hitung periode 5 menit
 function getCurrentPeriod() {
   const now = new Date();
   const rounded = Math.floor(now.getMinutes() / 5) * 5;
   return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${String(rounded).padStart(2,"0")}`;
 }
 
+// Fungsi untuk hitung blok 30 menit
+function getEggBlock() {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const blockMinutes = minutes < 30 ? "00" : "30";
+  return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${blockMinutes}`;
+}
+
+// ==========================
+// Pembersih cache Egg, dijalankan setiap jam
+function cleanEggCache() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentDate = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+  
+  for (const block in eggSentBlocks) {
+    if (!block.startsWith(currentDate + " " + currentHour)) {
+      delete eggSentBlocks[block]; // hapus blok yang tidak aktif di jam ini
+    }
+  }
+  console.log(`[Egg Cache] Dibersihkan, sisa blok: ${Object.keys(eggSentBlocks).length}`);
+}
+
+// Set interval pembersih setiap jam
+setInterval(cleanEggCache, 60 * 60 * 1000); // 1 jam
+
+// ==========================
+// Handler pesan utama
+async function handleMessage(m) {
   const text = m.body.toLowerCase();
   const currentPeriod = getCurrentPeriod();
 
-  // Kalau pesan dari primary (ids[0])
+  // Update lastActivePeriod & activeId
   if (m.chat === ids[0] || m.sender === ids[0]) {
-    lastActivePeriod = currentPeriod; // catat periode aktif
-    activeId = ids[0]; // tetap primary
-  }
-
-  // Kalau pesan dari fallback (ids[1]) & primary tidak aktif di periode ini
-  if ((m.chat === ids[1] || m.sender === ids[1]) && lastActivePeriod !== currentPeriod) {
-    activeId = ids[1]; // pindah ke fallback
+    lastActivePeriod = currentPeriod;
+    activeId = ids[0];
+  } else if ((m.chat === ids[1] || m.sender === ids[1]) && lastActivePeriod !== currentPeriod) {
+    activeId = ids[1];
   }
 
   // Hanya proses jika pesan dari activeId
-  if (m.chat === activeId || m.sender === activeId) {
-    const stockKeywords = ["🥕","🫐","🍓","🍅","common egg","cosmetic","strawberry"];
+  if (!(m.chat === activeId || m.sender === activeId)) return;
 
-    if (
-      text.includes("🥚") &&
-      text.includes("stock") &&
-      stockKeywords.some(keyword => text.includes(keyword.toLowerCase()))
-    ) {
-      await client.sendMessage("120363422344034424@newsletter", { text: formatStock(m.body) });
+  const stockKeywords = ["🥕","🫐","🍓","🍅","common egg","cosmetic","strawberry"];
+  const targets = ["egg", "carrot", "strawberry", "tomato"]; // contoh target items
 
-      const matchedItems = targets.filter(item => new RegExp(item, "i").test(text));
-
-      if (matchedItems.length > 0) {
-        const itemListText = matchedItems.join("\n- ");
-        try {
-          m.meta = await client.groupMetadata("120363321707002812@g.us");
-        } catch (e) {
-          m.meta = {};
+  // Stock Notification
+  if (text.includes("🥚") && text.includes("stock") && stockKeywords.some(k => text.includes(k))) {
+    const matchedItems = targets.filter(item => new RegExp(item, "i").test(text));
+    
+    if (matchedItems.length > 0) {
+      const eggBlock = getEggBlock();
+      const filteredItems = matchedItems.filter(item => {
+        if (item.toLowerCase().includes("egg")) {
+          // hanya kirim sekali per blok 30 menit
+          if (eggSentBlocks[eggBlock]) return false;
+          eggSentBlocks[eggBlock] = true;
+          return true;
         }
+        return true;
+      });
 
-        await client.sendMessage(
-          "120363321707002812@g.us",
-          {
-            text: `*Stock Notification!!* 📢\n\n🚀 Stock Available!!\n- ${itemListText}\n\n@120363321707002812@g.us`,
-            contextInfo: {
-              mentionedJid: m.meta.participants
-                .filter(a => a.id.endsWith('@s.whatsapp.net'))
-                .map(a => a.id),
-              groupMentions: [
-                {
-                  groupJid: "120363321707002812@g.us",
-                  groupSubject: "everyone"
-                }
-              ]
-            }
-          },
-          { quoted: fkontak }
-        );
+      if (filteredItems.length === 0) return; // tidak ada item yang boleh dikirim
+
+      const itemListText = filteredItems.join("\n- ");
+
+      try {
+        m.meta = await client.groupMetadata("120363321707002812@g.us");
+      } catch (e) {
+        m.meta = {};
       }
-    } else if (
-      text.includes("copyright © growagarden.info") &&
-      text.includes("mutation") &&
-      text.includes("weather")
-    ) {
-      await client.sendMessage("120363422344034424@newsletter", { text: weatherInfo(m.body) });
+
+      await client.sendMessage(
+        "120363321707002812@g.us",
+        {
+          text: `*Stock Notification!!* 📢\n\n🚀 Stock Available!!\n- ${itemListText}\n\n@120363321707002812@g.us`,
+          contextInfo: {
+            mentionedJid: m.meta.participants
+              .filter(a => a.id.endsWith('@s.whatsapp.net'))
+              .map(a => a.id),
+            groupMentions: [
+              {
+                groupJid: "120363321707002812@g.us",
+                groupSubject: "everyone"
+              }
+            ]
+          }
+        },
+        { quoted: fkontak }
+      );
     }
+
+    await client.sendMessage("120363422344034424@newsletter", { text: formatStock(m.body) });
+  }
+
+  // Weather Notification
+  else if (text.includes("copyright © growagarden.info") && text.includes("mutation") && text.includes("weather")) {
+    await client.sendMessage("120363422344034424@newsletter", { text: weatherInfo(m.body) });
+  }
 }
+
+// ==========================
+// Jalankan pembersih pertama kali saat start
+cleanEggCache();
 const prefa = ["!", ".", "#"];
 const usePrefa = true;
 
