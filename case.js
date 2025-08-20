@@ -1,5 +1,5 @@
 /*
-
+tes
 Creator & Dev: Azrefta & Evelyn
 Buy?
  - t.me/Azrefta
@@ -536,3 +536,4 @@ require('fs').watchFile(file, () => {
   delete require.cache[file];
   require(file);
 });
+
