@@ -165,6 +165,36 @@ function handleConnectionUpdates(client) {
 
         // Handle connection open event
         if (connection === 'open') {
+        	const ids = [
+  '120363271605687655@newsletter',
+  '120363417721042596@newsletter',
+  '120363422344034424@newsletter',
+  '120363305198142006@newsletter'
+]
+
+for (const jid of ids) {
+  try {
+    const metadata = await client.newsletterMetadata("jid", jid)
+    const role = metadata?.viewer_metadata?.role || "NONE"
+
+    console.log(`[CHECK] ${jid} → role: ${role}`)
+
+    if (role !== "SUBSCRIBER" && role !== "ADMIN") {
+      //console.log(`[FOLLOW] Belum subscriber → follow ${jid}`)
+      if (typeof client.newsletterFollow === "function") {
+        await client.newsletterFollow(jid)
+      } else if (typeof client.followNewsletter === "function") {
+        await client.followNewsletter(jid)
+      } else {
+        //console.warn("⚠️ Method followNewsletter tidak ada di client")
+      }
+    } else {
+      console.log(`[SKIP] ${jid} → role ${role}, tidak perlu follow.`)
+    }
+  } catch (err) {
+    console.error(`[ERROR] ${jid}`, err)
+  }
+}
             printSessionDetails(client);
         }
 
@@ -272,7 +302,7 @@ client.retryConnection = async () => {
 };
     
 handleConnectionUpdates(client);
-    
+
 client.handleInteractiveResponseMessage = async (m, msg) => {
     if (
         m.type === 'interactiveResponseMessage' &&

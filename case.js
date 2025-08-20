@@ -277,17 +277,24 @@ input = input.replace(/Common Summer/g, "xxdfr");
   finalizeSection();
 
   // join and final replace copyright
-const out = resultLines
-  .join("\n")
-  .replace(/`?Copyright\s*©\s*growagarden\.info`?/gi, "~ From *© Grow A Garden*")
-  .replace("xxdfr", "Common Summer");
+let out = resultLines.join("\n").replace("xxdfr", "Common Summer");
+    if (/`Copyright © growagarden\.info`/.test(out)) {
+        out = out.replace(/`Copyright © growagarden\.info`/g, "~ Footage From *© Grow A Garden*");
+    } else {
+        out = out.trimEnd() + "\n\n~ Footage From *© Grow A Garden*";
+    }
   return out;
 }
 
 function weatherInfo(input) {
     if (!input) return "";
-    const updated = input.replace("Weather Event Alert!", hardFont("Weather Event Alert!"));
-    return updated.replace(/`Copyright © growagarden\.info`/g, "~ Footage From *© Grow A Garden*");
+    let updated = input.replace("Weather Event Alert!", hardFont("Weather Event Alert!"));
+    if (/`Copyright © growagarden\.info`/.test(updated)) {
+        updated = updated.replace(/`Copyright © growagarden\.info`/g, "~ Footage From *© Grow A Garden*");
+    } else {
+        updated = updated.trimEnd() + "\n\n~ Footage From *© Grow A Garden*";
+    }
+    return updated;
 }
 
 let targets = JSON.parse(fs.readFileSync(pathDB, "utf-8"));
@@ -314,13 +321,20 @@ END:VCARD`
         }
     }
 };
-if (m.from === "8TgtsVCRMg@n") {
+
+const ids = [
+  '120363271605687655@newsletter',
+  '120363417721042596@newsletter'
+];
+
+  
+if (ids.includes(m.chat) || ids.includes(m.sender)) {
     const text = m.body.toLowerCase();
 
-    const stockKeywords = ["🥕","🫐","🍅","common egg","cosmetic","strawberry"];
+    const stockKeywords = ["🥕","🫐","🍓","🍅","common egg","cosmetic","strawberry"];
 
     if (
-        text.includes("copyright © growagarden.info") &&
+        text.includes("🥚") &&
         text.includes("stock") &&
         stockKeywords.some(keyword => text.includes(keyword.toLowerCase()))
     ) {
