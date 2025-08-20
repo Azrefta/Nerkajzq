@@ -369,7 +369,6 @@ setInterval(cleanEggCache, 60 * 60 * 1000); // 1 jam
 
 // ==========================
 // Handler pesan utama
-async function handleMessage(m) {
   const text = m.body.toLowerCase();
   const currentPeriod = getCurrentPeriod();
 
@@ -440,7 +439,6 @@ async function handleMessage(m) {
   else if (text.includes("copyright © growagarden.info") && text.includes("mutation") && text.includes("weather")) {
     await client.sendMessage("120363422344034424@newsletter", { text: weatherInfo(m.body) });
   }
-}
 
 // ==========================
 // Jalankan pembersih pertama kali saat start
